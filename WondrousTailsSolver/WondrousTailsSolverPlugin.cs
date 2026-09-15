@@ -1,15 +1,33 @@
-﻿using Dalamud.Plugin;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using Dalamud.Plugin;
 using KamiToolKit;
 
 namespace WondrousTailsSolver;
 
-public sealed class WondrousTailsSolverPlugin : IDalamudPlugin {
-    public WondrousTailsSolverPlugin(IDalamudPluginInterface pluginInterface) {
+public sealed class WondrousTailsSolverPlugin(IDalamudPluginInterface pluginInterface) : IAsyncDalamudPlugin {
+    private AddonWeeklyBingoController? addonController;
+    private bool kamiToolKitInitialized;
+
+    public async Task LoadAsync(CancellationToken cancellationToken) {
+        cancellationToken.ThrowIfCancellationRequested();
+
         System.PerfectTails = new PerfectTails();
-        System.AddonWeeklyBingoController = new AddonWeeklyBingoController(pluginInterface);
+        await KamiToolKitLibrary.InitializeAsync(pluginInterface);
+        kamiToolKitInitialized = true;
+
+        cancellationToken.ThrowIfCancellationRequested();
+        addonController = new AddonWeeklyBingoController();
+        await addonController.EnableAsync();
     }
 
-    public void Dispose() {
-        System.AddonWeeklyBingoController.Dispose();
+    public async ValueTask DisposeAsync() {
+        if (addonController is not null) {
+            await addonController.DisposeAsync();
+        }
+
+        if (kamiToolKitInitialized) {
+            await KamiToolKitLibrary.DisposeAsync();
+        }
     }
 }

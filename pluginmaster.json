@@ -1,0 +1,26 @@
+[
+  {
+    "Author": "daemitus, MidoriKami",
+    "Name": "ezWondrousTails 2",
+    "InternalName": "WondrousTailsSolver2",
+    "AssemblyVersion": "3.2.2.8",
+    "Description": "This plugin prints the probability of getting a row in Wondrous Tails to the in-game display along with the average probability of what would happen if you shuffled.",
+    "ApplicableVersion": "any",
+    "RepoUrl": "https://github.com/izzetus/EzWondrousTails2",
+    "DalamudApiLevel": 15,
+    "IsHide": false,
+    "IsTestingExclusive": false,
+    "LoadRequiredState": 0,
+    "LoadSync": false,
+    "CanUnloadAsync": true,
+    "LoadPriority": 0,
+    "Punchline": "Adds row probabilities to the Wondrous Tails display.",
+    "AcceptsFeedback": true,
+    "IconUrl": "https://raw.githubusercontent.com/izzetus/EzWondrousTails2/master/res/icon.png",
+    "ImageUrls": [
+      "https://raw.githubusercontent.com/izzetus/EzWondrousTails2/master/res/image1.png"
+    ],
+    "DownloadLinkInstall": "https://github.com/izzetus/EzWondrousTails2/releases/download/v3.2.2.8/latest.zip",
+    "DownloadLinkUpdate": "https://github.com/izzetus/EzWondrousTails2/releases/download/v3.2.2.8/latest.zip"
+  }
+]

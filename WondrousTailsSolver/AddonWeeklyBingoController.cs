@@ -1,37 +1,47 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Numerics;
+using System.Threading.Tasks;
 using Dalamud.Game.Text.SeStringHandling;
-using Dalamud.Plugin;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using KamiToolKit;
 using KamiToolKit.Classes;
-using KamiToolKit.Classes.Controllers;
+using KamiToolKit.Controllers;
+using KamiToolKit.Enums;
 using KamiToolKit.Extensions;
 using KamiToolKit.Nodes;
 
 namespace WondrousTailsSolver;
 
-public unsafe class AddonWeeklyBingoController : AddonController<AddonWeeklyBingo> {
+public unsafe class AddonWeeklyBingoController : IAsyncDisposable {
+    private readonly AddonController<AddonWeeklyBingo> controller;
+    private ushort originalTextNodeHeight;
+    private byte[]? originalTextNodeString;
     private TextNode? probabilityTextNode;
 
-    public AddonWeeklyBingoController(IDalamudPluginInterface pluginInterface) : base("WeeklyBingo") {
-        KamiToolKitLibrary.Initialize(pluginInterface);
-        OnAttach += AttachNodes;
-        OnRefresh += AddonRefresh;
-        OnUpdate += AddonRefresh;
-        OnDetach += DetachNodes;
-        Enable();
+    public AddonWeeklyBingoController() {
+        controller = new AddonController<AddonWeeklyBingo> {
+            AddonName = "WeeklyBingo",
+            OnSetup = AttachNodes,
+            OnRefresh = AddonRefresh,
+            OnUpdate = AddonRefresh,
+            OnFinalize = DetachNodes,
+        };
     }
+
+    public Task EnableAsync() => controller.EnableAsync();
+
+    public ValueTask DisposeAsync() => controller.DisposeAsync();
 
     private void AttachNodes(AddonWeeklyBingo* addon) {
         var existingTextNode = addon->GetTextNodeById(34);
         if (existingTextNode is null) return;
-        
-        
+
+        originalTextNodeHeight = existingTextNode->GetHeight();
+
         // Shrink existing node, the game doesn't need that space anyway.
-        existingTextNode->SetHeight((ushort)(existingTextNode->GetHeight() * 2.0f / 3.0f));
+        existingTextNode->SetHeight((ushort)(originalTextNodeHeight * 2.0f / 3.0f));
 
         // Add new custom text node to ui
         probabilityTextNode = new TextNode {
@@ -45,9 +55,9 @@ public unsafe class AddonWeeklyBingoController : AddonController<AddonWeeklyBing
             LineSpacing = existingTextNode->LineSpacing,
             CharSpacing = existingTextNode->CharSpacing,
             TextFlags = TextFlags.MultiLine | (TextFlags)existingTextNode->TextFlags,
-            String = System.PerfectTails.SolveAndGetProbabilitySeString().TextValue,
         };
 
+        UpdateProbabilityText();
         probabilityTextNode.AttachNode((AtkResNode*)existingTextNode, NodePosition.AfterTarget);
     }
     
@@ -59,6 +69,7 @@ public unsafe class AddonWeeklyBingoController : AddonController<AddonWeeklyBing
         if (probabilityTextNode is not null) {
             var existingTextNode = addon->GetTextNodeById(34);
             if (existingTextNode is null) return;
+            originalTextNodeString ??= SeString.Parse(existingTextNode->NodeText).Encode();
             var nodeText = SeString.Parse(existingTextNode->NodeText);
 
             var lineBreakIndex = -1;
@@ -88,17 +99,31 @@ public unsafe class AddonWeeklyBingoController : AddonController<AddonWeeklyBing
                 existingTextNode->SetText(newString.Encode());
             }
 
-            probabilityTextNode.String = System.PerfectTails.SolveAndGetProbabilitySeString().TextValue;
+            UpdateProbabilityText();
         }
     }
-    
+
+    private void UpdateProbabilityText() {
+        if (probabilityTextNode is not null) {
+            probabilityTextNode.Node->SetText(System.PerfectTails.SolveAndGetProbabilitySeString().Encode());
+        }
+    }
+
     private void DetachNodes(AddonWeeklyBingo* addon) {
         var existingTextNode = addon->GetTextNodeById(34);
         if (existingTextNode is not null) {
-            existingTextNode->SetHeight((ushort)(existingTextNode->GetHeight() * 3.0f / 2.0f));
+            if (originalTextNodeHeight is not 0) {
+                existingTextNode->SetHeight(originalTextNodeHeight);
+            }
+
+            if (originalTextNodeString is not null) {
+                existingTextNode->SetText(originalTextNodeString);
+            }
         }
 
         probabilityTextNode?.Dispose();
         probabilityTextNode = null;
+        originalTextNodeHeight = 0;
+        originalTextNodeString = null;
     }
 }
