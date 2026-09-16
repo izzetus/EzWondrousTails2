@@ -2,7 +2,7 @@
   <PropertyGroup>
     <PackageId>WondrousTailsSolver2</PackageId>
     <AssemblyName>WondrousTailsSolver2</AssemblyName>
-    <Version>3.2.3.0</Version>
+    <Version>3.2.3.1</Version>
     <Authors>Izzetus</Authors>
     <PackageProjectUrl>https://github.com/izzetus/EzWondrousTails2</PackageProjectUrl>
 	  <CanUnloadAsync>true</CanUnloadAsync>

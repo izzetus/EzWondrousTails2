@@ -154,7 +154,7 @@ public sealed partial class PerfectTails {
 /// Getting formatted results
 /// </summary>
 public sealed unsafe partial class PerfectTails {
-    public SeString SolveAndGetProbabilitySeString() {
+    public (SeString[] Current, SeString[]? Shuffle) SolveAndGetProbabilityDisplay() {
         var stickersPlaced = PlayerState.Instance()->WeeklyBingoNumPlacedStickers;
 
         // > 9 returns Error {-1,-1,-1} by the solver
@@ -165,51 +165,47 @@ public sealed unsafe partial class PerfectTails {
             samples = GetSample(stickersPlaced);
 
         if (values == Error) {
-            return new SeStringBuilder()
-                .AddText("                 1 Line    2 Lines   3 Lines\r")
-                .AddText("Current          ")
-                .AddUiForeground("error     ", 704)
-                .AddUiForeground("error     ", 704)
-                .AddUiForeground("error", 704)
-                .Build();
+            var errorValues = Enumerable.Range(0, 3)
+                .Select(_ => new SeStringBuilder().AddUiForeground("error", 704).Build())
+                .ToArray();
+            return (errorValues, null);
         }
 
         var valuePayloads = this.StringFormatDoubles(values);
-        var seString = new SeStringBuilder()
-            .AddText("                 1 Line    2 Lines   3 Lines\r")
-            .AddText("Current          ");
+        var currentValues = new SeString[values.Length];
 
         if (samples != null) {
             foreach (var (index, value, sample, valuePayload) in Enumerable.Range(0, values.Length).Select(i => (i, values[i], samples[i], valuePayloads[i]))) {
                 const double bound = 0.05;
                 var sampleBoundLower = Math.Max(0, sample - bound);
-                // var sampleBoundUpper = Math.Min(1, sample + bound);
+                var valueBuilder = new SeStringBuilder();
 
                 if (Math.Abs(value - 1) < 0.1f)
-                    seString.AddUiGlow(valuePayload, 2);
+                    valueBuilder.AddUiGlow(valuePayload, 2);
                 else if (value < 1 && value >= sample)
-                    seString.AddUiForeground(valuePayload, 67);
+                    valueBuilder.AddUiForeground(valuePayload, 67);
                 else if (sample > value && value > sampleBoundLower)
-                    seString.AddUiForeground(valuePayload, 66);
+                    valueBuilder.AddUiForeground(valuePayload, 66);
                 else if (sampleBoundLower > value && value > 0)
-                    seString.AddUiForeground(valuePayload, 561);
+                    valueBuilder.AddUiForeground(valuePayload, 561);
                 else if (value == 0)
-                    seString.AddUiForeground(valuePayload, 704);
+                    valueBuilder.AddUiForeground(valuePayload, 704);
                 else
-                    seString.AddText(valuePayload);
+                    valueBuilder.AddText(valuePayload);
 
-                if (index < values.Length - 1)
-                    seString.AddText("     ");
+                currentValues[index] = valueBuilder.Build();
             }
 
-            seString.AddText("\rAfter Shuffle    ");
-            seString.AddText(string.Join("     ", this.StringFormatDoubles(samples)));
+            var shuffleValues = this.StringFormatDoubles(samples)
+                .Select(value => new SeStringBuilder().AddText(value).Build())
+                .ToArray();
+            return (currentValues, shuffleValues);
         }
-        else {
-            seString.AddText(string.Join("     ", valuePayloads));
-        }
-        
-        return seString.Build();
+
+        currentValues = valuePayloads
+            .Select(value => new SeStringBuilder().AddText(value).Build())
+            .ToArray();
+        return (currentValues, null);
     }
 
     private string[] StringFormatDoubles(IEnumerable<double> values)
