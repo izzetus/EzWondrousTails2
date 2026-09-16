@@ -18,7 +18,7 @@ public unsafe class AddonWeeklyBingoController : IAsyncDisposable {
     private readonly AddonController<AddonWeeklyBingo> controller;
     private ushort originalTextNodeHeight;
     private byte[]? originalTextNodeString;
-    private TextNode? probabilityTextNode;
+    private BackgroundTextNode? probabilityCardNode;
 
     public AddonWeeklyBingoController() {
         controller = new AddonController<AddonWeeklyBingo> {
@@ -40,25 +40,30 @@ public unsafe class AddonWeeklyBingoController : IAsyncDisposable {
 
         originalTextNodeHeight = existingTextNode->GetHeight();
 
-        // Shrink existing node, the game doesn't need that space anyway.
-        existingTextNode->SetHeight((ushort)(originalTextNodeHeight * 2.0f / 3.0f));
+        const float cardSpacing = 2.0f;
+        var cardHeight = Math.Clamp(originalTextNodeHeight * 0.48f, 42.0f, 54.0f);
+        var messageHeight = Math.Max(20.0f, originalTextNodeHeight - cardHeight - cardSpacing);
 
-        // Add new custom text node to ui
-        probabilityTextNode = new TextNode {
+        // Keep the game's message above the card while staying inside the original text region.
+        existingTextNode->SetHeight((ushort)messageHeight);
+
+        probabilityCardNode = new BackgroundTextNode {
             NodeFlags = NodeFlags.Enabled | NodeFlags.Visible,
-            Size = new Vector2(existingTextNode->GetWidth(), existingTextNode->GetHeight()),
-            Position = new Vector2(existingTextNode->GetXFloat(), existingTextNode->GetYFloat() + existingTextNode->GetHeight()),
-            TextColor = existingTextNode->TextColor.ToVector4(),
-            TextOutlineColor = existingTextNode->EdgeColor.ToVector4(),
-            BackgroundColor = existingTextNode->BackgroundColor.ToVector4(),
-            FontSize = existingTextNode->FontSize,
-            LineSpacing = existingTextNode->LineSpacing,
-            CharSpacing = existingTextNode->CharSpacing,
-            TextFlags = TextFlags.MultiLine | (TextFlags)existingTextNode->TextFlags,
+            Size = new Vector2(existingTextNode->GetWidth() - 8.0f, cardHeight),
+            Position = new Vector2(existingTextNode->GetXFloat() + 4.0f, existingTextNode->GetYFloat() + messageHeight + cardSpacing),
+            BackgroundColor = new Vector4(0.02f, 0.02f, 0.02f, 0.88f),
+            TextColor = Vector4.One,
+            TextOutlineColor = new Vector4(0.0f, 0.0f, 0.0f, 1.0f),
+            FontSize = 11,
+            FontType = FontType.MiedingerMed,
+            TextFlags = TextFlags.MultiLine | TextFlags.Edge,
         };
 
+        probabilityCardNode.TextNode.AlignmentType = AlignmentType.Left;
+        probabilityCardNode.TextNode.LineSpacing = 13;
+
         UpdateProbabilityText();
-        probabilityTextNode.AttachNode((AtkResNode*)existingTextNode, NodePosition.AfterTarget);
+        probabilityCardNode.AttachNode((AtkResNode*)existingTextNode, NodePosition.AfterTarget);
     }
     
     private void AddonRefresh(AddonWeeklyBingo* addon) {
@@ -66,7 +71,7 @@ public unsafe class AddonWeeklyBingoController : IAsyncDisposable {
             System.PerfectTails.GameState[index] = PlayerState.Instance()->IsWeeklyBingoStickerPlaced(index);
         }
 
-        if (probabilityTextNode is not null) {
+        if (probabilityCardNode is not null) {
             var existingTextNode = addon->GetTextNodeById(34);
             if (existingTextNode is null) return;
             originalTextNodeString ??= SeString.Parse(existingTextNode->NodeText).Encode();
@@ -104,8 +109,8 @@ public unsafe class AddonWeeklyBingoController : IAsyncDisposable {
     }
 
     private void UpdateProbabilityText() {
-        if (probabilityTextNode is not null) {
-            probabilityTextNode.Node->SetText(System.PerfectTails.SolveAndGetProbabilitySeString().Encode());
+        if (probabilityCardNode is not null) {
+            probabilityCardNode.TextNode.Node->SetText(System.PerfectTails.SolveAndGetProbabilitySeString().Encode());
         }
     }
 
@@ -121,8 +126,8 @@ public unsafe class AddonWeeklyBingoController : IAsyncDisposable {
             }
         }
 
-        probabilityTextNode?.Dispose();
-        probabilityTextNode = null;
+        probabilityCardNode?.Dispose();
+        probabilityCardNode = null;
         originalTextNodeHeight = 0;
         originalTextNodeString = null;
     }

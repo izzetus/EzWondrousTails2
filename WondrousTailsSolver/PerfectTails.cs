@@ -166,19 +166,21 @@ public sealed unsafe partial class PerfectTails {
 
         if (values == Error) {
             return new SeStringBuilder()
-                .AddText("Line Chances: ")
-                .AddUiForeground("error ", 704)
-                .AddUiForeground("error ", 704)
-                .AddUiForeground("error ", 704)
+                .AddText("                 1 Line    2 Lines   3 Lines\r")
+                .AddText("Current          ")
+                .AddUiForeground("error     ", 704)
+                .AddUiForeground("error     ", 704)
+                .AddUiForeground("error", 704)
                 .Build();
         }
 
         var valuePayloads = this.StringFormatDoubles(values);
         var seString = new SeStringBuilder()
-            .AddText("Line Chances: ");
+            .AddText("                 1 Line    2 Lines   3 Lines\r")
+            .AddText("Current          ");
 
         if (samples != null) {
-            foreach (var (value, sample, valuePayload) in Enumerable.Range(0, values.Length).Select(i => (values[i], samples[i], valuePayloads[i]))) {
+            foreach (var (index, value, sample, valuePayload) in Enumerable.Range(0, values.Length).Select(i => (i, values[i], samples[i], valuePayloads[i]))) {
                 const double bound = 0.05;
                 var sampleBoundLower = Math.Max(0, sample - bound);
                 // var sampleBoundUpper = Math.Min(1, sample + bound);
@@ -196,14 +198,15 @@ public sealed unsafe partial class PerfectTails {
                 else
                     seString.AddText(valuePayload);
 
-                seString.AddText("  ");
+                if (index < values.Length - 1)
+                    seString.AddText("     ");
             }
 
-            seString.AddText("\rShuffle Average: ");
-            seString.AddText(string.Join(" ", this.StringFormatDoubles(samples)));
+            seString.AddText("\rAfter Shuffle    ");
+            seString.AddText(string.Join("     ", this.StringFormatDoubles(samples)));
         }
         else {
-            seString.AddText(string.Join(" ", valuePayloads));
+            seString.AddText(string.Join("     ", valuePayloads));
         }
         
         return seString.Build();
